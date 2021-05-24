@@ -49,93 +49,99 @@ const payment = async (req,res)=>{
 }
 
 const callBackMellat = async (req,res)=>{
-    let Run_bpReversalRequest = false;
-    let saleReferenceId = -999;
-    let saleOrderId = -999;
-    let resultCode_bpPayRequest;
+    try {
 
-    if(req.body.ResCode === null || req.body.SaleOrderId === null
-        || req.body.SaleReferenceId === null || req.body.CardHolderPan === null)
-    {
-        return res.status(422).json({error: 'پارامترهای لازم از طرف بانک ارسال نشد.'});
-    }
-    saleReferenceId = parseInt(req.body.SaleReferenceId, 10);
-    saleOrderId = parseInt(req.body.SaleOrderId, 10);
-    resultCode_bpPayRequest = parseInt(req.body.ResCode);
-    const cardHolderPan = req.body.CardHolderPan;
-    console.log(req.body);
+        let Run_bpReversalRequest = false;
+        let saleReferenceId = -999;
+        let saleOrderId = -999;
+        let resultCode_bpPayRequest;
 
-    //Result Code
-    let  resultCode_bpinquiryRequest = "-9999";
-    let resultCode_bpSettleRequest = "-9999";
-    let resultCode_bpVerifyRequest = "-9999";
-
-    if(resultCode_bpPayRequest === 0) {
-        //verify request
-    resultCode_bpVerifyRequest = await bpVerifyRequest(saleOrderId, saleOrderId, saleReferenceId);
-    resultCode_bpVerifyRequest = resultCode_bpVerifyRequest.return;
-    console.log('bpVerifyRequest:'+resultCode_bpVerifyRequest);
-
-    if(resultCode_bpVerifyRequest === null || resultCode_bpVerifyRequest.length === 0) {
-        //Inquiry Request
-        resultCode_bpinquiryRequest = await bpInquiryRequest(saleOrderId, saleOrderId, saleReferenceId);
-        resultCode_bpinquiryRequest = parseInt(resultCode_bpinquiryRequest.return);
-        console.log('bpinquiryRequest'+resultCode_bpinquiryRequest);
-
-        if(resultCode_bpinquiryRequest !== 0) {
-            let resultReversePay =  await bpReversalRequest(saleOrderId, saleOrderId, saleReferenceId);
-            resultReversePay = resultReversePay.return;
-            console.log(resultReversePay);
-            const error = responseContentByStatus(resultCode_bpinquiryRequest);
-            return res.render('mellat_payment_result.ejs', {error});
+        if (req.body.ResCode === null || req.body.SaleOrderId === null
+            || req.body.SaleReferenceId === null || req.body.CardHolderPan === null) {
+            return res.status(422).json({error: 'پارامترهای لازم از طرف بانک ارسال نشد.'});
         }
-    }
+        saleReferenceId = parseInt(req.body.SaleReferenceId, 10);
+        saleOrderId = parseInt(req.body.SaleOrderId, 10);
+        resultCode_bpPayRequest = parseInt(req.body.ResCode);
+        const cardHolderPan = req.body.CardHolderPan;
+        console.log(req.body);
 
-    if(parseInt(resultCode_bpVerifyRequest) === 0 || resultCode_bpinquiryRequest === 0) {
-        //SettleRequest
-        resultCode_bpSettleRequest = await bpSettleRequest(saleOrderId, saleOrderId, saleReferenceId);
-        resultCode_bpSettleRequest = parseInt(resultCode_bpSettleRequest.return);
-        console.log('bpSettleRequest'+resultCode_bpSettleRequest);
+        //Result Code
+        let resultCode_bpinquiryRequest = "-9999";
+        let resultCode_bpSettleRequest = "-9999";
+        let resultCode_bpVerifyRequest = "-9999";
 
-        //ﺗﺮاﻛﻨﺶ_Settle_ﺷﺪه_اﺳﺖ
-        //ﺗﺮاﻛﻨﺶ_ﺑﺎ_ﻣﻮﻓﻘﻴﺖ_اﻧﺠﺎم_ﺷﺪ
-        if(resultCode_bpSettleRequest === 0 || resultCode_bpSettleRequest === 45) {
-            //success payment
-            let msg = 'تراکنش شما با موفقیت انجام شد ';
-            msg += " لطفا شماره پیگیری را یادداشت نمایید" + saleReferenceId;
+        if (resultCode_bpPayRequest === 0) {
+            //verify request
+            resultCode_bpVerifyRequest = await bpVerifyRequest(saleOrderId, saleOrderId, saleReferenceId);
+            resultCode_bpVerifyRequest = resultCode_bpVerifyRequest.return;
+            console.log('bpVerifyRequest:' + resultCode_bpVerifyRequest);
 
-            //save success payment into db
-            console.log(msg);
+            if (resultCode_bpVerifyRequest === null || resultCode_bpVerifyRequest.length === 0) {
+                //Inquiry Request
+                resultCode_bpinquiryRequest = await bpInquiryRequest(saleOrderId, saleOrderId, saleReferenceId);
+                resultCode_bpinquiryRequest = parseInt(resultCode_bpinquiryRequest.return);
+                console.log('bpinquiryRequest' + resultCode_bpinquiryRequest);
 
-            return res.render('mellat_payment_result.ejs', {msg});
-        }
-    }else {
-        if (saleOrderId != -999 && saleReferenceId != -999) {
-            if(resultCode_bpPayRequest !== 17)
-            {
-                let resultReversePay =  await bpReversalRequest(saleOrderId, saleOrderId, saleReferenceId);
-                resultReversePay = resultReversePay.return;
-                console.log(resultReversePay);
+                if (resultCode_bpinquiryRequest !== 0) {
+                    let resultReversePay = await bpReversalRequest(saleOrderId, saleOrderId, saleReferenceId);
+                    resultReversePay = resultReversePay.return;
+                    console.log(resultReversePay);
+                    const error = responseContentByStatus(resultCode_bpinquiryRequest);
+                    return res.render('mellat_payment_result.ejs', {error});
+                }
             }
 
+            if (parseInt(resultCode_bpVerifyRequest) === 0 || resultCode_bpinquiryRequest === 0) {
+                //SettleRequest
+                resultCode_bpSettleRequest = await bpSettleRequest(saleOrderId, saleOrderId, saleReferenceId);
+                resultCode_bpSettleRequest = parseInt(resultCode_bpSettleRequest.return);
+                console.log('bpSettleRequest' + resultCode_bpSettleRequest);
+
+                //ﺗﺮاﻛﻨﺶ_Settle_ﺷﺪه_اﺳﺖ
+                //ﺗﺮاﻛﻨﺶ_ﺑﺎ_ﻣﻮﻓﻘﻴﺖ_اﻧﺠﺎم_ﺷﺪ
+                if (resultCode_bpSettleRequest === 0 || resultCode_bpSettleRequest === 45) {
+                    //success payment
+                    let msg = 'تراکنش شما با موفقیت انجام شد ';
+                    msg += " لطفا شماره پیگیری را یادداشت نمایید" + saleReferenceId;
+
+                    //save success payment into db
+                    console.log(msg);
+
+                    return res.render('mellat_payment_result.ejs', {msg});
+                }
+            } else {
+                if (saleOrderId != -999 && saleReferenceId != -999) {
+                    if (resultCode_bpPayRequest !== 17) {
+                        let resultReversePay = await bpReversalRequest(saleOrderId, saleOrderId, saleReferenceId);
+                        resultReversePay = resultReversePay.return;
+                        console.log(resultReversePay);
+                    }
+
+                }
+
+                const error = responseContentByStatus(resultCode_bpVerifyRequest);
+
+                return res.render('mellat_payment_result.ejs', {error});
+            }
+        } else {
+            if (saleOrderId != -999 && saleReferenceId != -999) {
+                if (resultCode_bpPayRequest !== 17) {
+                    let resultReversePay = await bpReversalRequest(saleOrderId, saleOrderId, saleReferenceId);
+                    resultReversePay = resultReversePay.return;
+                    console.log(resultReversePay);
+                }
+                const error = responseContentByStatus(resultCode_bpPayRequest);
+
+                return res.render('mellat_payment_result.ejs', {error});
+            }
         }
-
-        const error = responseContentByStatus(resultCode_bpVerifyRequest);
-
-        return res.render('mellat_payment_result.ejs', {error});
     }
-} else {
-    if (saleOrderId != -999 && saleReferenceId != -999) {
-        if(resultCode_bpPayRequest !== 17) {
-            let resultReversePay =  await bpReversalRequest(saleOrderId, saleOrderId, saleReferenceId);
-            resultReversePay = resultReversePay.return;
-            console.log(resultReversePay);
-        }
-        const error = responseContentByStatus(resultCode_bpPayRequest);
-
-        return res.render('mellat_payment_result.ejs', {error});
+    catch (e)
+    {
+        console.log(e);
+        res.status(400).end(JSON.stringify(e));
     }
- }
 }
 
 
