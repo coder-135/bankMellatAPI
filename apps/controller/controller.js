@@ -4,7 +4,7 @@ moment.locale('en');
 
 const mellatWsdl = "https://bpm.shaparak.ir/pgwchannel/services/pgw?wsdl";
 const PgwSite = "https://bpm.shaparak.ir/pgwchannel/startpay.mellat";
-const callBackUrl =process.env.callBackUrl;
+const callBackUrl ='http://agrodayan.ir/pay/callbackmellat';
 const terminalId = +process.env.terminalId;
 const userName = "agridayan";
 const userPassword = process.env.userPassword;
@@ -23,10 +23,13 @@ const payment = async (req,res)=>{
             payRequestResult = payRequestResult.split(",");
 
             if(parseInt(payRequestResult[0]) === 0) {
-                let bankRespond = {
-                    url:PgwSite,
-                    RefId:payRequestResult[1]};
-                res.status(200).json(bankRespond);
+                //  "mobileNo" سمت کلاینت لطفا به این آبجکت درصورت وجود شماره موبایل اضافه شود با این کلید
+                //example ==> let mobileNo = 989121231111;
+                // let bankRespond = {
+                //     url:PgwSite,
+                //     RefId:payRequestResult[1]};
+                // res.status(200).json(bankRespond);
+                return res.render('redirect_vpos.ejs', {bank_url: PgwSite, RefId: payRequestResult[1]})
             }else {
                 if(payRequestResult[0] === null) {
                     return res.status(400).json({error: 'هیچ شماره پیگیری برای پرداخت از سمت بانک ارسال نشده است!'});
@@ -45,6 +48,95 @@ const payment = async (req,res)=>{
 
 }
 
+const callBackMellat = async (req,res)=>{
+    let Run_bpReversalRequest = false;
+    let saleReferenceId = -999;
+    let saleOrderId = -999;
+    let resultCode_bpPayRequest;
+
+    if(req.body.ResCode === null || req.body.SaleOrderId === null
+        || req.body.SaleReferenceId === null || req.body.CardHolderPan === null)
+    {
+        return res.status(422).json({error: 'پارامترهای لازم از طرف بانک ارسال نشد.'});
+    }
+    saleReferenceId = parseInt(req.body.SaleReferenceId, 10);
+    saleOrderId = parseInt(req.body.SaleOrderId, 10);
+    resultCode_bpPayRequest = parseInt(req.body.ResCode);
+    const cardHolderPan = req.body.CardHolderPan;
+    console.log(req.body);
+
+    //Result Code
+    let  resultCode_bpinquiryRequest = "-9999";
+    let resultCode_bpSettleRequest = "-9999";
+    let resultCode_bpVerifyRequest = "-9999";
+
+    if(resultCode_bpPayRequest === 0) {
+        //verify request
+    resultCode_bpVerifyRequest = await bpVerifyRequest(saleOrderId, saleOrderId, saleReferenceId);
+    resultCode_bpVerifyRequest = resultCode_bpVerifyRequest.return;
+    console.log('bpVerifyRequest:'+resultCode_bpVerifyRequest);
+
+    if(resultCode_bpVerifyRequest === null || resultCode_bpVerifyRequest.length === 0) {
+        //Inquiry Request
+        resultCode_bpinquiryRequest = await bpInquiryRequest(saleOrderId, saleOrderId, saleReferenceId);
+        resultCode_bpinquiryRequest = parseInt(resultCode_bpinquiryRequest.return);
+        console.log('bpinquiryRequest'+resultCode_bpinquiryRequest);
+
+        if(resultCode_bpinquiryRequest !== 0) {
+            let resultReversePay =  await bpReversalRequest(saleOrderId, saleOrderId, saleReferenceId);
+            resultReversePay = resultReversePay.return;
+            console.log(resultReversePay);
+            const error = responseContentByStatus(resultCode_bpinquiryRequest);
+            return res.render('mellat_payment_result.ejs', {error});
+        }
+    }
+
+    if(parseInt(resultCode_bpVerifyRequest) === 0 || resultCode_bpinquiryRequest === 0) {
+        //SettleRequest
+        resultCode_bpSettleRequest = await bpSettleRequest(saleOrderId, saleOrderId, saleReferenceId);
+        resultCode_bpSettleRequest = parseInt(resultCode_bpSettleRequest.return);
+        console.log('bpSettleRequest'+resultCode_bpSettleRequest);
+
+        //ﺗﺮاﻛﻨﺶ_Settle_ﺷﺪه_اﺳﺖ
+        //ﺗﺮاﻛﻨﺶ_ﺑﺎ_ﻣﻮﻓﻘﻴﺖ_اﻧﺠﺎم_ﺷﺪ
+        if(resultCode_bpSettleRequest === 0 || resultCode_bpSettleRequest === 45) {
+            //success payment
+            let msg = 'تراکنش شما با موفقیت انجام شد ';
+            msg += " لطفا شماره پیگیری را یادداشت نمایید" + saleReferenceId;
+
+            //save success payment into db
+            console.log(msg);
+
+            return res.render('mellat_payment_result.ejs', {msg});
+        }
+    }else {
+        if (saleOrderId != -999 && saleReferenceId != -999) {
+            if(resultCode_bpPayRequest !== 17)
+            {
+                let resultReversePay =  await bpReversalRequest(saleOrderId, saleOrderId, saleReferenceId);
+                resultReversePay = resultReversePay.return;
+                console.log(resultReversePay);
+            }
+
+        }
+
+        const error = responseContentByStatus(resultCode_bpVerifyRequest);
+
+        return res.render('mellat_payment_result.ejs', {error});
+    }
+} else {
+    if (saleOrderId != -999 && saleReferenceId != -999) {
+        if(resultCode_bpPayRequest !== 17) {
+            let resultReversePay =  await bpReversalRequest(saleOrderId, saleOrderId, saleReferenceId);
+            resultReversePay = resultReversePay.return;
+            console.log(resultReversePay);
+        }
+        const error = responseContentByStatus(resultCode_bpPayRequest);
+
+        return res.render('mellat_payment_result.ejs', {error});
+    }
+ }
+}
 
 
 function bpPayRequest (orderId, amount, additionalData, callBackUrl) {
@@ -81,11 +173,6 @@ function bpPayRequest (orderId, amount, additionalData, callBackUrl) {
         });
     });
 }
-
-
-
-
-
 
 function responseContentByStatus(status){
     const mellatBankReturnCode =
@@ -147,9 +234,127 @@ function responseContentByStatus(status){
    //  })
 }
 
+function bpVerifyRequest (orderId, saleOrderId, saleReferenceId) {
+    const args = {
+        terminalId: terminalId,
+        userName: userName,
+        userPassword: userPassword,
+        orderId: orderId,
+        saleOrderId: saleOrderId,
+        saleReferenceId: saleReferenceId,
+    };
 
+    let options = {
+        overrideRootElement: {
+            namespace: 'ns1'
+        }
+    };
 
+    return new Promise ((resolve, reject) => {
+        soap.createClient(mellatWsdl, options, (err, client) => {
+            client.bpVerifyRequest(args, (err, result, body) => {
+
+                if(err) {
+                    //console.log(err);
+                    reject(err);
+                }
+                console.log(`result from verify : ${result}`)
+                return resolve(result);
+            })
+        });
+    });
+}
+function bpInquiryRequest (orderId, saleOrderId, saleReferenceId) {
+    const args = {
+        terminalId: terminalId,
+        userName: userName,
+        userPassword: userPassword,
+        orderId: orderId,
+        saleOrderId: saleOrderId,
+        saleReferenceId: saleReferenceId,
+    };
+
+    let options = {
+        overrideRootElement: {
+            namespace: 'ns1'
+        }
+    };
+
+    return new Promise ((resolve, reject) => {
+        soap.createClient(mellatWsdl, options, (err, client) => {
+            client.bpInquiryRequest(args, (err, result, body) => {
+
+                if(err) {
+                    //console.log(err);
+                    reject(err);
+                }
+                console.log(`message from inquiry func : ${result}`)
+                return resolve(result);
+            })
+        });
+    });
+}
+
+function bpReversalRequest (orderId, saleOrderId, saleReferenceId) {
+    const args = {
+        terminalId: terminalId,
+        userName: userName,
+        userPassword: userPassword,
+        orderId: orderId,
+        saleOrderId: saleOrderId,
+        saleReferenceId: saleReferenceId,
+    };
+
+    let options = {
+        overrideRootElement: {
+            namespace: 'ns1'
+        }
+    };
+
+    return new Promise ((resolve, reject) => {
+        soap.createClient(mellatWsdl, options, (err, client) => {
+            client.bpReversalRequest(args, (err, result, body) => {
+
+                if(err) {
+                    //console.log(err);
+                    reject(err);
+                }
+                return resolve(result);
+            })
+        });
+    });
+}
+function bpSettleRequest (orderId, saleOrderId, saleReferenceId) {
+    const args = {
+        terminalId: terminalId,
+        userName: userName,
+        userPassword: userPassword,
+        orderId: orderId,
+        saleOrderId: saleOrderId,
+        saleReferenceId: saleReferenceId,
+    };
+
+    let options = {
+        overrideRootElement: {
+            namespace: 'ns1'
+        }
+    };
+
+    return new Promise ((resolve, reject) => {
+        soap.createClient(mellatWsdl, options, (err, client) => {
+            client.bpSettleRequest(args, (err, result, body) => {
+
+                if(err) {
+                    //console.log(err);
+                    reject(err);
+                }
+                return resolve(result);
+            })
+        });
+    });
+}
 
 module.exports = {
-    payment
+    payment,
+    callBackMellat
 }
