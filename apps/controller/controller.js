@@ -13,8 +13,8 @@ const userPassword = process.env.userPassword;
 
 const payment = async (req,res)=>{
     try {
-        if(req.query.amount) {
-            const amount = +req.query.amount;
+        if(req.params.amount) {
+            const amount = +req.params.amount;
             const orderId = +(moment().valueOf());
 
             let payRequestResult = await bpPayRequest(orderId, amount, 'ok', callBackUrl);
@@ -102,8 +102,8 @@ const callBackMellat = async (req,res)=>{
                 //ﺗﺮاﻛﻨﺶ_ﺑﺎ_ﻣﻮﻓﻘﻴﺖ_اﻧﺠﺎم_ﺷﺪ
                 if (resultCode_bpSettleRequest === 0 || resultCode_bpSettleRequest === 45) {
                     //success payment
-                    let msg = 'تراکنش شما با موفقیت انجام شد ';
-                    msg += " لطفا شماره پیگیری را یادداشت نمایید" + saleReferenceId;
+                    let msg = ' تراکنش شما با موفقیت انجام شد ';
+                    msg += "  لطفا شماره پیگیری را یادداشت نمایید  " + saleReferenceId;
 
                     //save success payment into db
                     console.log(msg);
