@@ -14,7 +14,7 @@ const userPassword = process.env.userPassword;
 const payment = async (req,res)=>{
     try {
         if(req.query.amount) {
-            const amount = +req.params.amount;
+            const amount = +req.query.amount;
             const orderId = +(moment().valueOf());
             let payRequestResult = await bpPayRequest(orderId, amount, 'ok', callBackUrl);
             console.log(payRequestResult);
