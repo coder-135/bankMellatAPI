@@ -13,10 +13,9 @@ const userPassword = process.env.userPassword;
 
 const payment = async (req,res)=>{
     try {
-        if(req.params.amount) {
+        if(req.query.amount) {
             const amount = +req.params.amount;
             const orderId = +(moment().valueOf());
-
             let payRequestResult = await bpPayRequest(orderId, amount, 'ok', callBackUrl);
             console.log(payRequestResult);
             payRequestResult = payRequestResult.return;
@@ -25,11 +24,11 @@ const payment = async (req,res)=>{
             if(parseInt(payRequestResult[0]) === 0) {
                 //  "mobileNo" سمت کلاینت لطفا به این آبجکت درصورت وجود شماره موبایل اضافه شود با این کلید
                 //example ==> let mobileNo = 989121231111;
-                // let bankRespond = {
-                //     url:PgwSite,
-                //     RefId:payRequestResult[1]};
-                // res.status(200).json(bankRespond);
-                return res.render('redirect_vpos.ejs', {bank_url: PgwSite, RefId: payRequestResult[1]})
+                let bankRespond = {
+                    url:PgwSite,
+                    RefId:payRequestResult[1]};
+                res.status(200).json(bankRespond);
+                // return res.render('redirect_vpos.ejs', {bank_url: PgwSite, RefId: payRequestResult[1]})
             }else {
                 if(payRequestResult[0] === null) {
                     return res.status(400).json({error: 'هیچ شماره پیگیری برای پرداخت از سمت بانک ارسال نشده است!'});
@@ -107,8 +106,8 @@ const callBackMellat = async (req,res)=>{
 
                     //save success payment into db
                     console.log(msg);
-
-                    return res.render('mellat_payment_result.ejs', {msg});
+                    return res.status(200).json({message:msg})
+                    // return res.render('mellat_payment_result.ejs', {msg});
                 }
             } else {
                 if (saleOrderId != -999 && saleReferenceId != -999) {
@@ -121,8 +120,8 @@ const callBackMellat = async (req,res)=>{
                 }
 
                 const error = responseContentByStatus(resultCode_bpVerifyRequest);
-
-                return res.render('mellat_payment_result.ejs', {error});
+                return res.status(400).json({error:error});
+                // return res.render('mellat_payment_result.ejs', {error});
             }
         } else {
             if (saleOrderId != -999 && saleReferenceId != -999) {
@@ -132,8 +131,8 @@ const callBackMellat = async (req,res)=>{
                     console.log(resultReversePay);
                 }
                 const error = responseContentByStatus(resultCode_bpPayRequest);
-
-                return res.render('mellat_payment_result.ejs', {error});
+                return res.status(400).json({error:error});
+                // return res.render('mellat_payment_result.ejs', {error});
             }
         }
     }
