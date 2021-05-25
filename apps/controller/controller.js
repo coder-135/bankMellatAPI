@@ -27,6 +27,7 @@ const payment = async (req,res)=>{
                 let bankRespond = {
                     url:PgwSite,
                     RefId:payRequestResult[1]};
+
                 res.status(200).json(bankRespond);
                 // return res.render('redirect_vpos.ejs', {bank_url: PgwSite, RefId: payRequestResult[1]})
             }else {
