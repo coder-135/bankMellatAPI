@@ -108,8 +108,9 @@ const callBackMellat = async (req,res)=>{
 
                     //save success payment into db
                     console.log(msg);
-                    return res.status(200).json({message:msg})
-                    // return res.render('mellat_payment_result.ejs', {msg});
+                    request(url,msg);
+                    // return res.status(200).json({message:msg})
+                    return res.render('mellat_payment_result.ejs', {msg});
                 }
             } else {
                 if (saleOrderId != -999 && saleReferenceId != -999) {
@@ -122,8 +123,8 @@ const callBackMellat = async (req,res)=>{
                 }
 
                 const error = responseContentByStatus(resultCode_bpVerifyRequest);
-                return res.status(400).json({error:error});
-                // return res.render('mellat_payment_result.ejs', {error});
+                // return res.status(400).json({error:error});
+                return res.render('mellat_payment_result.ejs', {error});
             }
         } else {
             if (saleOrderId != -999 && saleReferenceId != -999) {
@@ -133,8 +134,8 @@ const callBackMellat = async (req,res)=>{
                     console.log(resultReversePay);
                 }
                 const error = responseContentByStatus(resultCode_bpPayRequest);
-                return res.status(400).json({error:error});
-                // return res.render('mellat_payment_result.ejs', {error});
+                // return res.status(400).json({error:error});
+                return res.render('mellat_payment_result.ejs', {error});
             }
         }
     }
