@@ -28,8 +28,8 @@ const payment = async (req,res)=>{
                     url:PgwSite,
                     RefId:payRequestResult[1]};
 
-                res.status(200).json(bankRespond);
-                // return res.render('redirect_vpos.ejs', {bank_url: PgwSite, RefId: payRequestResult[1]})
+                // res.status(200).json(bankRespond);
+                return res.render('redirect_vpos.ejs', {bank_url: PgwSite, RefId: payRequestResult[1]})
             }else {
                 if(payRequestResult[0] === null) {
                     return res.status(400).json({error: 'هیچ شماره پیگیری برای پرداخت از سمت بانک ارسال نشده است!'});
