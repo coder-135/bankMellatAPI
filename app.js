@@ -18,8 +18,8 @@ app.set('view engine', 'ejs');
 
 
 app.get('/',(req,res)=>{
-    res.end('server is ok')
-    // res.render('index.ejs')
+    // res.end('server is ok')
+    res.render('mellat_payment_result.ejs')
 })
 
 
