@@ -104,7 +104,7 @@ const callBackMellat = async (req,res)=>{
                 if (resultCode_bpSettleRequest === 0 || resultCode_bpSettleRequest === 45) {
                     //success payment
                     let msg = ' تراکنش شما با موفقیت انجام شد ';
-                    msg += "  لطفا شماره پیگیری را یادداشت نمایید  " + saleReferenceId;
+                    msg += "شماره پیگیری :" + saleReferenceId;
 
                     //save success payment into db
                     console.log(msg);
