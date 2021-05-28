@@ -105,10 +105,8 @@ const callBackMellat = async (req,res)=>{
                     //success payment
                     let msg = ' تراکنش شما با موفقیت انجام شد ';
                     msg += "شماره پیگیری :" + saleReferenceId;
-
                     //save success payment into db
                     console.log(msg);
-                    request(url,msg);
                     // return res.status(200).json({message:msg})
                     return res.render('mellat_payment_result.ejs', {msg});
                 }
